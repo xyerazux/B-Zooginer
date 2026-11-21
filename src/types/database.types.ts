@@ -359,6 +359,7 @@ export interface Database {
         };
       };
     };
+    Views: Record<string, never>;
     Functions: {
       is_master_admin: {
         Args: Record<PropertyKey, never>;
@@ -441,6 +442,15 @@ export interface Database {
         Returns: boolean;
       };
     };
+    Enums: {
+      role_type: RoleType;
+      po_status_type: PoStatusType;
+      order_source_type: OrderSourceType;
+      payment_method_type: PaymentMethodType;
+      payment_status_type: PaymentStatusType;
+      order_status_type: OrderStatusType;
+    };
+    CompositeTypes: Record<string, never>;
   };
 }
 

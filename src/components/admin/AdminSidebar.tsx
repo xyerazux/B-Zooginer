@@ -6,6 +6,7 @@ import {
   ShoppingBag,
   History,
   Utensils,
+  BarChart3,
   X,
   ExternalLink,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     { label: 'Kelola Stan Kelompok', path: '/admin/groups', icon: Store },
     { label: 'Kelola Akun Admin', path: '/admin/admins', icon: Users },
     { label: 'Semua Pesanan', path: '/admin/orders', icon: ShoppingBag },
+    { label: 'Laporan & Keuangan', path: '/admin/reports', icon: BarChart3 },
     { label: 'Log Aktivitas', path: '/admin/logs', icon: History },
   ];
 
@@ -34,6 +36,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     { label: 'Ringkasan Stan', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Produk Menu Stan', path: '/dashboard/products', icon: Utensils },
     { label: 'Pesanan Masuk Stan', path: '/dashboard/orders', icon: ShoppingBag },
+    { label: 'Laporan & Penjualan', path: '/dashboard/reports', icon: BarChart3 },
   ];
 
   const navItems = isMasterAdmin ? masterAdminNav : groupAdminNav;

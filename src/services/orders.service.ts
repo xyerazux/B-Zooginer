@@ -267,18 +267,63 @@ export async function cancelOrder(orderId: string): Promise<void> {
 }
 
 /**
- * Update order payment status
+ * Update order payment status and record audit log into activity_logs
+ * Records: Who changed status (actor_id), when (timestamp), previous status, new status
  */
 export async function updateOrderPayment(
   orderId: string,
   paymentStatus: PaymentStatusType
 ): Promise<void> {
+  // 1. Fetch current order to obtain previous status and details
+  const { data: currentOrder } = await supabase
+    .from('orders')
+    .select('id, order_code, payment_status, total, group_id')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  const orderRecord = currentOrder as {
+    id: string;
+    order_code: string;
+    payment_status: PaymentStatusType;
+    total: number;
+    group_id: string;
+  } | null;
+
+  const previousStatus = orderRecord?.payment_status || 'unpaid';
+
+  // 2. Update payment status
   const { error } = await (supabase.from('orders') as any)
     .update({ payment_status: paymentStatus })
     .eq('id', orderId);
 
   if (error) {
     throw new Error(`Gagal memperbarui status pembayaran: ${error.message}`);
+  }
+
+  // 3. Record tamper-proof audit log in activity_logs
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      await (supabase.from('activity_logs') as any).insert({
+        actor_id: user.id,
+        action: 'payment.status_updated',
+        entity_type: 'order',
+        entity_id: orderId,
+        metadata: {
+          order_code: orderRecord?.order_code || null,
+          previous_status: previousStatus,
+          new_status: paymentStatus,
+          total: orderRecord?.total || 0,
+          group_id: orderRecord?.group_id || null,
+          verified_at: new Date().toISOString(),
+        },
+      });
+    }
+  } catch (logErr) {
+    console.error('Peringatan: Gagal mencatat audit log pembayaran:', logErr);
   }
 }
 

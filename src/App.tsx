@@ -24,12 +24,14 @@ const MasterDashboardPage = React.lazy(() => import('@/pages/master-admin/Master
 const GroupManagementPage = React.lazy(() => import('@/pages/master-admin/GroupManagementPage').then((m) => ({ default: m.GroupManagementPage })));
 const AdminManagementPage = React.lazy(() => import('@/pages/master-admin/AdminManagementPage').then((m) => ({ default: m.AdminManagementPage })));
 const AllOrdersPage = React.lazy(() => import('@/pages/master-admin/AllOrdersPage').then((m) => ({ default: m.AllOrdersPage })));
+const MasterReportsPage = React.lazy(() => import('@/pages/master-admin/MasterReportsPage').then((m) => ({ default: m.MasterReportsPage })));
 const ActivityLogsPage = React.lazy(() => import('@/pages/master-admin/ActivityLogsPage').then((m) => ({ default: m.ActivityLogsPage })));
 
 // Group Admin Pages
 const GroupDashboardPage = React.lazy(() => import('@/pages/group-admin/GroupDashboardPage').then((m) => ({ default: m.GroupDashboardPage })));
 const GroupProductsPage = React.lazy(() => import('@/pages/group-admin/GroupProductsPage').then((m) => ({ default: m.GroupProductsPage })));
 const GroupOrdersPage = React.lazy(() => import('@/pages/group-admin/GroupOrdersPage').then((m) => ({ default: m.GroupOrdersPage })));
+const GroupReportsPage = React.lazy(() => import('@/pages/group-admin/GroupReportsPage').then((m) => ({ default: m.GroupReportsPage })));
 
 // TanStack Query Client
 const queryClient = new QueryClient({
@@ -75,6 +77,7 @@ export function App() {
                 <Route path="groups" element={<GroupManagementPage />} />
                 <Route path="admins" element={<AdminManagementPage />} />
                 <Route path="orders" element={<AllOrdersPage />} />
+                <Route path="reports" element={<MasterReportsPage />} />
                 <Route path="logs" element={<ActivityLogsPage />} />
               </Route>
 
@@ -90,6 +93,7 @@ export function App() {
                 <Route index element={<GroupDashboardPage />} />
                 <Route path="products" element={<GroupProductsPage />} />
                 <Route path="orders" element={<GroupOrdersPage />} />
+                <Route path="reports" element={<GroupReportsPage />} />
               </Route>
 
               {/* 404 Fallback */}

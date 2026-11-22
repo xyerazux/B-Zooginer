@@ -204,15 +204,11 @@ export async function updateOrderStatus(
   }
 }
 
+import { updateOrderPayment } from '@/services/orders.service';
+
 /**
- * Confirm order payment as paid
+ * Confirm order payment as paid (records audit log)
  */
 export async function confirmOrderPayment(orderId: string): Promise<void> {
-  const { error } = await (supabase.from('orders') as any)
-    .update({ payment_status: 'paid' })
-    .eq('id', orderId);
-
-  if (error) {
-    throw new Error(`Gagal mengonfirmasi status pembayaran: ${error.message}`);
-  }
+  await updateOrderPayment(orderId, 'paid');
 }

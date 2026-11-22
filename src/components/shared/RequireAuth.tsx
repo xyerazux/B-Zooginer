@@ -46,10 +46,12 @@ export function RequireAuth({ role, children }: RequireAuthProps) {
           </div>
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Navigate
-              to={profile.role === 'master_admin' ? '/admin' : '/dashboard'}
-              replace
-            />
+            <a
+              href={profile.role === 'master_admin' ? '/admin' : '/dashboard'}
+              className="w-full h-10 px-4 text-xs font-semibold text-primary-800 bg-primary-50 hover:bg-primary-100 rounded-md transition-colors inline-flex items-center justify-center gap-1.5"
+            >
+              Kembali ke Dashboard Anda
+            </a>
             <button
               onClick={() => signOut()}
               className="w-full h-10 px-4 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-md transition-colors inline-flex items-center justify-center gap-1.5"

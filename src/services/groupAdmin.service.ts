@@ -47,6 +47,9 @@ export async function getGroupAdminStats(groupId: string): Promise<GroupAdminSta
   let unpaidOrdersCount = 0;
 
   groupOrders.forEach((o) => {
+    // CRITICAL: Exclude cancelled orders from revenue and receivable calculations
+    if (o.order_status === 'cancelled') return;
+
     if (o.payment_status === 'paid') {
       paidRevenue += Number(o.total || 0);
     } else {

@@ -60,6 +60,9 @@ export async function getMasterAdminStats(): Promise<MasterAdminStats> {
   const todayStr = new Date().toISOString().slice(0, 10);
 
   allOrders.forEach((o) => {
+    // CRITICAL: Exclude cancelled orders from revenue and receivable calculations
+    if (o.order_status === 'cancelled') return;
+
     const val = Number(o.total || 0);
     if (o.payment_status === 'paid') {
       paidRevenue += val;

@@ -4,7 +4,6 @@
 // - Professional formatting: Dark slate blue headers (#1E3A5F), currency formatting, summary rows
 // - Double-checks that cancelled orders are excluded from revenue calculation
 
-import ExcelJS from 'exceljs';
 import type { ComprehensiveReportData } from '@/services/reports.service';
 
 export interface ExportExcelOptions {
@@ -22,6 +21,9 @@ export async function exportReportToExcel({
   generatedBy = 'Administrator',
   filterDescription = 'Semua Periode',
 }: ExportExcelOptions): Promise<void> {
+  // Dynamic import to avoid bundling ExcelJS (~1.4 MB) in the main chunk
+  const ExcelJSModule = await import('exceljs');
+  const ExcelJS = ExcelJSModule.default || ExcelJSModule;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'B-Zooginer Platform';
   workbook.lastModifiedBy = generatedBy;

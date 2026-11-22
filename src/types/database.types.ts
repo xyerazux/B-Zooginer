@@ -426,6 +426,24 @@ export interface Database {
           total: number;
         }[];
       };
+      submit_admin_order: {
+        Args: {
+          p_group_id: string;
+          p_buyer_name: string;
+          p_buyer_class: string;
+          p_whatsapp: string | null;
+          p_payment_method: PaymentMethodType;
+          p_payment_status: PaymentStatusType;
+          p_notes: string | null;
+          p_items: Json;
+        };
+        Returns: {
+          order_id: string;
+          order_code: string;
+          access_token: string;
+          total: number;
+        }[];
+      };
       bootstrap_master_admin: {
         Args: {
           p_user_id: string;

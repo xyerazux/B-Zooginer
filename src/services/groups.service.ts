@@ -3,10 +3,18 @@
 // Rule: Pure async functions, no React hooks, no JSX
 
 import { supabase } from '@/lib/supabase';
-import type { GroupRow, ProductRow } from '@/types/database.types';
+import type { GroupRow, ProductRow, PoStatusType } from '@/types/database.types';
 
 export interface GroupWithProducts extends GroupRow {
   products: ProductRow[];
+}
+
+export interface UpdateGroupProfileInput {
+  name?: string;
+  description?: string | null;
+  logo_url?: string | null;
+  poster_url?: string | null;
+  po_status?: PoStatusType;
 }
 
 /**
@@ -58,10 +66,33 @@ export async function getGroupBySlugOrId(identifier: string): Promise<GroupWithP
   // Filter products to only active products for public display
   const groupData = data as unknown as GroupWithProducts;
   if (groupData.products) {
-    groupData.products = groupData.products.filter(p => p.is_active);
+    groupData.products = groupData.products.filter((p) => p.is_active);
   } else {
     groupData.products = [];
   }
 
   return groupData;
+}
+
+/**
+ * Update group profile details (description, poster, logo, po_status)
+ */
+export async function updateGroupProfile(
+  groupId: string,
+  input: UpdateGroupProfileInput
+): Promise<void> {
+  const payload: Record<string, any> = {};
+  if (input.name !== undefined) payload.name = input.name.trim();
+  if (input.description !== undefined) payload.description = input.description?.trim() || null;
+  if (input.logo_url !== undefined) payload.logo_url = input.logo_url;
+  if (input.poster_url !== undefined) payload.poster_url = input.poster_url;
+  if (input.po_status !== undefined) payload.po_status = input.po_status;
+
+  const { error } = await (supabase.from('groups') as any)
+    .update(payload)
+    .eq('id', groupId);
+
+  if (error) {
+    throw new Error(`Gagal memperbarui profil stan: ${error.message}`);
+  }
 }

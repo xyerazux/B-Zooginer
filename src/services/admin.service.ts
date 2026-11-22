@@ -28,6 +28,7 @@ export interface AdminAccountItem extends ProfileRow {
 
 export interface OrderWithGroupAndItems extends OrderRow {
   group: { name: string } | null;
+  items?: import('@/types/database.types').OrderItemRow[];
 }
 
 /**
@@ -222,15 +223,17 @@ export async function getAllOrders(filters?: {
   groupId?: string;
   orderStatus?: string;
   paymentStatus?: string;
+  source?: string;
   search?: string;
+  sortBy?: string;
 }): Promise<OrderWithGroupAndItems[]> {
   let query = supabase
     .from('orders')
     .select(`
       *,
-      group:groups (name)
-    `)
-    .order('created_at', { ascending: false });
+      group:groups (name),
+      items:order_items (*)
+    `);
 
   if (filters?.groupId && filters.groupId !== 'all') {
     query = query.eq('group_id', filters.groupId);
@@ -244,9 +247,25 @@ export async function getAllOrders(filters?: {
     query = query.eq('payment_status', filters.paymentStatus as any);
   }
 
+  if (filters?.source && filters.source !== 'all') {
+    query = query.eq('source', filters.source as any);
+  }
+
   if (filters?.search) {
     const s = `%${filters.search.trim()}%`;
     query = query.or(`buyer_name.ilike.${s},buyer_class.ilike.${s},order_code.ilike.${s}`);
+  }
+
+  if (filters?.sortBy === 'date_asc') {
+    query = query.order('created_at', { ascending: true });
+  } else if (filters?.sortBy === 'total_desc') {
+    query = query.order('total', { ascending: false });
+  } else if (filters?.sortBy === 'total_asc') {
+    query = query.order('total', { ascending: true });
+  } else if (filters?.sortBy === 'buyer_asc') {
+    query = query.order('buyer_name', { ascending: true });
+  } else {
+    query = query.order('created_at', { ascending: false });
   }
 
   const { data, error } = await query;

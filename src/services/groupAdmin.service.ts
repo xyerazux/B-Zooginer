@@ -123,6 +123,10 @@ export async function toggleProductActive(productId: string, isActive: boolean):
   }
 }
 
+export interface GroupOrderWithItems extends OrderRow {
+  items?: import('@/types/database.types').OrderItemRow[];
+}
+
 /**
  * Fetch orders belonging to group with optional filters
  */
@@ -131,16 +135,20 @@ export async function getGroupOrders(
   filters?: {
     orderStatus?: string;
     paymentStatus?: string;
+    source?: string;
     search?: string;
+    sortBy?: string;
   }
-): Promise<OrderRow[]> {
+): Promise<GroupOrderWithItems[]> {
   if (!groupId) return [];
 
   let query = supabase
     .from('orders')
-    .select('*')
-    .eq('group_id', groupId)
-    .order('created_at', { ascending: false });
+    .select(`
+      *,
+      items:order_items (*)
+    `)
+    .eq('group_id', groupId);
 
   if (filters?.orderStatus && filters.orderStatus !== 'all') {
     query = query.eq('order_status', filters.orderStatus as any);
@@ -150,9 +158,25 @@ export async function getGroupOrders(
     query = query.eq('payment_status', filters.paymentStatus as any);
   }
 
+  if (filters?.source && filters.source !== 'all') {
+    query = query.eq('source', filters.source as any);
+  }
+
   if (filters?.search) {
     const s = `%${filters.search.trim()}%`;
     query = query.or(`buyer_name.ilike.${s},buyer_class.ilike.${s},order_code.ilike.${s}`);
+  }
+
+  if (filters?.sortBy === 'date_asc') {
+    query = query.order('created_at', { ascending: true });
+  } else if (filters?.sortBy === 'total_desc') {
+    query = query.order('total', { ascending: false });
+  } else if (filters?.sortBy === 'total_asc') {
+    query = query.order('total', { ascending: true });
+  } else if (filters?.sortBy === 'buyer_asc') {
+    query = query.order('buyer_name', { ascending: true });
+  } else {
+    query = query.order('created_at', { ascending: false });
   }
 
   const { data, error } = await query;
@@ -161,7 +185,7 @@ export async function getGroupOrders(
     throw new Error(`Gagal memuat pesanan stan: ${error.message}`);
   }
 
-  return data || [];
+  return (data as unknown as GroupOrderWithItems[]) || [];
 }
 
 /**

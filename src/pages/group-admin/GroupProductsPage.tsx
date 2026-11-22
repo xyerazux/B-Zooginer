@@ -1,17 +1,40 @@
 import { useState } from 'react';
-import { Search, Utensils, Package, ToggleLeft, ToggleRight } from 'lucide-react';
+import {
+  Search,
+  Utensils,
+  Package,
+  ToggleLeft,
+  ToggleRight,
+  Plus,
+  Settings,
+  Edit2,
+  Eye,
+  Store,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { useGroupProducts, useToggleProductActive } from '@/hooks/useGroupAdmin';
+import { useGroupProducts, useToggleProductActive, useMyGroup } from '@/hooks/useGroupAdmin';
+import { ProductFormDialog } from '@/components/admin/ProductFormDialog';
+import { GroupProfileDialog } from '@/components/admin/GroupProfileDialog';
+import { ProductPreviewModal } from '@/components/admin/ProductPreviewModal';
+import type { ProductWithVariants } from '@/services/groupAdmin.service';
+import type { ProductFormData } from '@/services/products.service';
 
 export function GroupProductsPage() {
   const { profile } = useAuth();
   const groupId = profile?.group_id || '';
 
+  const { data: group } = useMyGroup(groupId);
   const { data: products, isLoading } = useGroupProducts(groupId);
   const toggleActiveMutation = useToggleProductActive(groupId);
 
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Dialog states
+  const [isProductFormOpen, setIsProductFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<ProductWithVariants | null>(null);
+  const [isGroupProfileOpen, setIsGroupProfileOpen] = useState(false);
+  const [previewProduct, setPreviewProduct] = useState<Partial<ProductFormData> | null>(null);
 
   const formatRupiah = (val: number) =>
     new Intl.NumberFormat('id-ID', {
@@ -46,6 +69,38 @@ export function GroupProductsPage() {
     }
   };
 
+  const handleOpenCreateProduct = () => {
+    setEditingProduct(null);
+    setIsProductFormOpen(true);
+  };
+
+  const handleOpenEditProduct = (p: ProductWithVariants) => {
+    setEditingProduct(p);
+    setIsProductFormOpen(true);
+  };
+
+  const handleOpenPreview = (p: ProductWithVariants) => {
+    setPreviewProduct({
+      name: p.name,
+      description: p.description,
+      base_price: p.base_price,
+      image_url: p.image_url,
+      has_variants: p.has_variants,
+      variant_dimensions: p.variant_dimensions,
+      variants: (p.variants || []).map((v) => ({
+        id: v.id,
+        title: v.title,
+        attributes: v.attributes as Record<string, string>,
+        price_adjustment: v.price_adjustment,
+        stock: v.stock,
+        is_active: v.is_active,
+      })),
+      track_stock: p.track_stock,
+      max_po_qty: p.max_po_qty,
+      is_featured: p.is_featured,
+    });
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -55,13 +110,28 @@ export function GroupProductsPage() {
             Produk Menu Stan
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Kelola ketersediaan menu makanan & minuman stan kelompok Anda di etalase toko.
+            Kelola katalog menu, penyesuaian harga varian multi-dimensi, dan ketersediaan stok stan.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold px-3 py-1.5 bg-primary-50 text-primary-900 rounded-md border border-primary-200">
-            Total {products?.length || 0} Menu
-          </span>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setIsGroupProfileOpen(true)}
+            className="h-10 px-3.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-2xs"
+          >
+            <Settings size={14} className="text-slate-500" />
+            <span>Pengaturan & Media Stan</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenCreateProduct}
+            className="h-10 px-4 text-xs font-bold text-white bg-primary-800 hover:bg-primary-700 rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-2xs"
+          >
+            <Plus size={15} />
+            <span>Tambah Menu Baru</span>
+          </button>
         </div>
       </div>
 
@@ -89,28 +159,38 @@ export function GroupProductsPage() {
             Memuat daftar produk menu...
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="p-12 text-center space-y-2">
+          <div className="p-12 text-center space-y-3">
             <Utensils size={36} className="mx-auto text-slate-300" />
             <h3 className="text-sm font-bold text-slate-800">Tidak Ada Produk Ditemukan</h3>
             <p className="text-xs text-slate-500">
               {searchTerm
                 ? 'Tidak ada produk yang cocok dengan kata kunci pencarian.'
-                : 'Stan ini belum memiliki produk menu yang terdaftar.'}
+                : 'Stan ini belum memiliki produk menu. Tekan tombol "Tambah Menu Baru" untuk mulai memasarkan.'}
             </p>
+            {!searchTerm && (
+              <button
+                type="button"
+                onClick={handleOpenCreateProduct}
+                className="h-9 px-4 text-xs font-semibold text-white bg-primary-800 hover:bg-primary-700 rounded-lg inline-flex items-center gap-1.5 shadow-2xs"
+              >
+                <Plus size={14} />
+                <span>Tambah Menu Pertama</span>
+              </button>
+            )}
           </div>
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
                   <tr>
                     <th className="py-3 px-4">Menu Produk</th>
                     <th className="py-3 px-4">Harga Dasar</th>
-                    <th className="py-3 px-4">Varian & Opsi</th>
+                    <th className="py-3 px-4">Varian Multi-Dimensi</th>
                     <th className="py-3 px-4">Total Stok</th>
                     <th className="py-3 px-4">Status Toko</th>
-                    <th className="py-3 px-4 text-right">Aksi</th>
+                    <th className="py-3 px-4 text-right">Aksi & Pengaturan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -131,7 +211,7 @@ export function GroupProductsPage() {
                       <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-md bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+                            <div className="w-11 h-11 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
                               {p.image_url ? (
                                 <img
                                   src={p.image_url}
@@ -143,7 +223,14 @@ export function GroupProductsPage() {
                               )}
                             </div>
                             <div>
-                              <span className="font-bold text-slate-900 block">{p.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-900 block">{p.name}</span>
+                                {p.is_featured && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-wider bg-accent-100 text-accent-800">
+                                    Favorit
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-[11px] text-slate-400 line-clamp-1">
                                 {p.description || '-'}
                               </span>
@@ -155,7 +242,7 @@ export function GroupProductsPage() {
                         </td>
                         <td className="py-3.5 px-4 text-slate-600">
                           {isMultiVariant ? (
-                            <span className="text-primary-800 font-semibold text-[11px]">
+                            <span className="text-primary-800 font-semibold text-[11px] bg-primary-50 px-2 py-0.5 rounded border border-primary-200">
                               {variantsCount} kombinasi varian
                             </span>
                           ) : (
@@ -182,27 +269,46 @@ export function GroupProductsPage() {
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          <button
-                            onClick={() => handleToggleActive(p.id, p.is_active, p.name)}
-                            disabled={toggleActiveMutation.isPending}
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition-colors ${
-                              p.is_active
-                                ? 'text-rose-700 bg-rose-50 hover:bg-rose-100'
-                                : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                            }`}
-                          >
-                            {p.is_active ? (
-                              <>
-                                <ToggleRight size={15} />
-                                <span>Nonaktifkan</span>
-                              </>
-                            ) : (
-                              <>
-                                <ToggleLeft size={15} />
-                                <span>Aktifkan</span>
-                              </>
-                            )}
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPreview(p)}
+                              className="p-1.5 text-slate-500 hover:text-primary-800 hover:bg-slate-100 rounded transition-colors"
+                              title="Pratinjau Toko"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditProduct(p)}
+                              className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded transition-colors inline-flex items-center gap-1"
+                            >
+                              <Edit2 size={12} />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleActive(p.id, p.is_active, p.name)}
+                              disabled={toggleActiveMutation.isPending}
+                              className={`px-2.5 py-1 rounded text-[11px] font-semibold inline-flex items-center gap-1 transition-colors ${
+                                p.is_active
+                                  ? 'text-rose-700 bg-rose-50 hover:bg-rose-100'
+                                  : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                              }`}
+                            >
+                              {p.is_active ? (
+                                <>
+                                  <ToggleRight size={14} />
+                                  <span>Nonaktifkan</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ToggleLeft size={14} />
+                                  <span>Aktifkan</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -212,7 +318,7 @@ export function GroupProductsPage() {
             </div>
 
             {/* Mobile Stacked Cards View */}
-            <div className="md:hidden divide-y divide-slate-100">
+            <div className="lg:hidden divide-y divide-slate-100">
               {filteredProducts.map((p) => {
                 const variantsCount = p.variants?.length || 0;
                 const totalVariantStock = (p.variants || []).reduce(
@@ -229,7 +335,7 @@ export function GroupProductsPage() {
                 return (
                   <div key={p.id} className="p-4 space-y-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-md bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
+                      <div className="w-14 h-14 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
                         {p.image_url ? (
                           <img
                             src={p.image_url}
@@ -237,7 +343,7 @@ export function GroupProductsPage() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <Utensils size={20} className="text-slate-400" />
+                          <Utensils size={22} className="text-slate-400" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -278,27 +384,34 @@ export function GroupProductsPage() {
                       </div>
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-2 flex items-center gap-2">
                       <button
+                        type="button"
+                        onClick={() => handleOpenPreview(p)}
+                        className="py-1.5 px-3 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold inline-flex items-center gap-1"
+                      >
+                        <Eye size={13} />
+                        <span>Pratinjau</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditProduct(p)}
+                        className="py-1.5 px-3 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold inline-flex items-center gap-1"
+                      >
+                        <Edit2 size={13} />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleToggleActive(p.id, p.is_active, p.name)}
                         disabled={toggleActiveMutation.isPending}
-                        className={`w-full py-2 rounded-md text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors ${
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center justify-center gap-1 transition-colors ${
                           p.is_active
-                            ? 'text-rose-700 bg-rose-50 hover:bg-rose-100'
-                            : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                            ? 'text-rose-700 bg-rose-50'
+                            : 'text-emerald-700 bg-emerald-50'
                         }`}
                       >
-                        {p.is_active ? (
-                          <>
-                            <ToggleRight size={15} />
-                            <span>Nonaktifkan dari Toko Publik</span>
-                          </>
-                        ) : (
-                          <>
-                            <ToggleLeft size={15} />
-                            <span>Aktifkan ke Toko Publik</span>
-                          </>
-                        )}
+                        {p.is_active ? 'Nonaktifkan' : 'Aktifkan'}
                       </button>
                     </div>
                   </div>
@@ -308,6 +421,32 @@ export function GroupProductsPage() {
           </>
         )}
       </div>
+
+      {/* Product Form Dialog (Create / Edit) */}
+      <ProductFormDialog
+        isOpen={isProductFormOpen}
+        onClose={() => setIsProductFormOpen(false)}
+        groupId={groupId}
+        groupName={group?.name}
+        editProduct={editingProduct}
+      />
+
+      {/* Group Profile & Poster Dialog */}
+      <GroupProfileDialog
+        isOpen={isGroupProfileOpen}
+        onClose={() => setIsGroupProfileOpen(false)}
+        group={group || null}
+      />
+
+      {/* Storefront Preview Modal */}
+      {previewProduct && (
+        <ProductPreviewModal
+          isOpen={Boolean(previewProduct)}
+          onClose={() => setPreviewProduct(null)}
+          product={previewProduct}
+          groupName={group?.name}
+        />
+      )}
     </div>
   );
 }

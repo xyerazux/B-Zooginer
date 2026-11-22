@@ -11,6 +11,8 @@ import {
   updateOrderStatus,
   confirmOrderPayment,
 } from '@/services/groupAdmin.service';
+import { cancelOrder } from '@/services/orders.service';
+import { updateGroupProfile, type UpdateGroupProfileInput } from '@/services/groups.service';
 import type { OrderStatusType } from '@/types/database.types';
 
 export function useGroupAdminStats(groupId: string) {
@@ -57,7 +59,9 @@ export function useGroupOrders(
   filters?: {
     orderStatus?: string;
     paymentStatus?: string;
+    source?: string;
     search?: string;
+    sortBy?: string;
   }
 ) {
   return useQuery({
@@ -76,6 +80,7 @@ export function useUpdateOrderStatus(groupId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-admin', 'orders', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-admin', 'stats', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
     },
   });
 }
@@ -87,6 +92,35 @@ export function useConfirmOrderPayment(groupId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-admin', 'orders', groupId] });
       queryClient.invalidateQueries({ queryKey: ['group-admin', 'stats', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
+    },
+  });
+}
+
+export function useCancelOrder(groupId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => cancelOrder(orderId),
+    onSuccess: () => {
+      if (groupId) {
+        queryClient.invalidateQueries({ queryKey: ['group-admin', 'orders', groupId] });
+        queryClient.invalidateQueries({ queryKey: ['group-admin', 'stats', groupId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+}
+
+export function useUpdateGroupProfile(groupId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateGroupProfileInput) => updateGroupProfile(groupId, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-admin', 'my-group', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'groups'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
     },
   });
 }
